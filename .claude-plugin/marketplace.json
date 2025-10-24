@@ -12,7 +12,7 @@
     {
       "name": "linear",
       "description": "Work with Linear issues, teams, projects, and users via CLI",
-      "source": "linear",
+      "source": "./linear",
       "strict": false,
       "skills": [
         "./linear/SKILL.md"
