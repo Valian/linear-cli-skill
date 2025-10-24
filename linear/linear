@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Linear CLI wrapper script
-# Runs the TypeScript CLI using local tsx
+# Runs the JavaScript CLI using node
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -18,5 +18,5 @@ if [ ! -d "$SCRIPT_DIR/node_modules" ]; then
   echo ""
 fi
 
-# Run the CLI with tsx
-exec "$SCRIPT_DIR/node_modules/.bin/tsx" "$SCRIPT_DIR/scripts/linear-cli.ts" "$@"
+# Run the CLI with node
+exec node "$SCRIPT_DIR/scripts/linear-cli.js" "$@"

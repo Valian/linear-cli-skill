@@ -1,6 +1,6 @@
 # Linear CLI Skill
 
-A Claude skill that provides a lightweight CLI for working with Linear issues. This skill uses the official Linear TypeScript SDK to interact with Linear's API.
+A Claude skill that provides a lightweight CLI for working with Linear issues. Written in JavaScript with minimal dependencies (only Linear SDK and dotenv).
 
 ## What's included
 

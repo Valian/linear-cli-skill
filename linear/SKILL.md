@@ -17,7 +17,7 @@ This skill provides a lightweight CLI to interact with Linear's issue tracking s
 - Listing issues with filters
 - Managing teams, users, and projects
 
-The CLI uses Linear's official TypeScript SDK and runs from the skill directory.
+The CLI is written in JavaScript and uses Linear's official SDK. It runs from the skill directory with minimal dependencies.
 
 ## Setup
 
