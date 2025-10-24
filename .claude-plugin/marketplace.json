@@ -1,0 +1,22 @@
+{
+  "name": "linear-cli-skill",
+  "owner": {
+    "name": "Jakub Skalecki",
+    "email": "jakub@mindnexus.dev"
+  },
+  "metadata": {
+    "description": "Lightweight CLI for working with Linear issues using the official Linear TypeScript SDK",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "linear",
+      "description": "Work with Linear issues, teams, projects, and users via CLI",
+      "source": "linear",
+      "strict": false,
+      "skills": [
+        "linear/SKILL.md"
+      ]
+    }
+  ]
+}
