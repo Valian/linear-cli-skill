@@ -15,7 +15,7 @@
       "source": "linear",
       "strict": false,
       "skills": [
-        "linear/SKILL.md"
+        "./linear/SKILL.md"
       ]
     }
   ]
