@@ -12,7 +12,8 @@ config({ path: join(linearDir, ".env") })
 function parseArgs(argv) {
   const args = []
   const flags = {}
-  let command = ""
+  let resource = ""
+  let action = ""
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i]
     if (arg.startsWith("--")) {
@@ -26,65 +27,101 @@ function parseArgs(argv) {
       }
     } else if (arg.startsWith("-")) {
       flags[arg.slice(1)] = true
-    } else if (!command) {
-      command = arg
+    } else if (!resource) {
+      resource = arg
+    } else if (!action) {
+      action = arg
     } else {
       args.push(arg)
     }
   }
-  return { command, args, flags }
+  return { resource, action, args, flags }
 }
 function showHelp() {
-  console.log(`linear-cli - CLI for working with Linear issues
+  console.log(`linear-cli - CLI for working with Linear
 
-Usage: linear-cli <command> [options]
+Usage: linear-cli <resource> <action> [arguments] [options]
 
-Commands:
-  users                          List all users
-  teams                          List all teams
-  projects                       List all projects
-  issues [options]               List issues with filters
-  issue <id-or-key>              Get issue details
-  create <title> [options]       Create a new issue
-  comment <id-or-key> <text>     Add comment to issue
-  update <id-or-key> [options]   Update issue fields
-  delete <id-or-key>             Delete an issue
+Resources:
+  issue      Work with issues
+  user       Work with users
+  team       Work with teams
+  project    Work with projects
 
 Global Options:
-  -h, --help                     Show help
-  --json                         Output raw JSON
+  -h, --help    Show help
+  --json        Output raw JSON
 
-Run 'linear-cli <command> --help' for command-specific help`)
+Run 'linear-cli <resource> --help' for resource-specific help
+Run 'linear-cli <resource> <action> --help' for action-specific help
+
+Examples:
+  linear-cli issue list
+  linear-cli issue view ENG-123
+  linear-cli issue create "Fix bug" --team <team-id>
+  linear-cli user list`)
 }
-function showUsersHelp() {
-  console.log(`Usage: linear-cli users [options]
+function showUserHelp() {
+  console.log(`Usage: linear-cli user <action>
 
-List all users
+Actions:
+  list    List all users
 
 Options:
-  --json    Output raw JSON
-  -h, --help    Show help`)
-}
-function showTeamsHelp() {
-  console.log(`Usage: linear-cli teams [options]
+  --json       Output raw JSON
+  -h, --help   Show help
 
-List all teams
+Examples:
+  linear-cli user list
+  linear-cli user list --json`)
+}
+function showTeamHelp() {
+  console.log(`Usage: linear-cli team <action>
+
+Actions:
+  list    List all teams
 
 Options:
-  --json    Output raw JSON
-  -h, --help    Show help`)
-}
-function showProjectsHelp() {
-  console.log(`Usage: linear-cli projects [options]
+  --json       Output raw JSON
+  -h, --help   Show help
 
-List all projects
+Examples:
+  linear-cli team list
+  linear-cli team list --json`)
+}
+function showProjectHelp() {
+  console.log(`Usage: linear-cli project <action>
+
+Actions:
+  list    List all projects
 
 Options:
-  --json    Output raw JSON
-  -h, --help    Show help`)
+  --json       Output raw JSON
+  -h, --help   Show help
+
+Examples:
+  linear-cli project list
+  linear-cli project list --json`)
 }
-function showIssuesHelp() {
-  console.log(`Usage: linear-cli issues [options]
+function showIssueHelp() {
+  console.log(`Usage: linear-cli issue <action> [arguments] [options]
+
+Actions:
+  list                            List issues with filters
+  view <id-or-key>                Get detailed information about an issue
+  create <title>                  Create a new issue
+  update <id-or-key>              Update an issue
+  delete <id-or-key>              Delete an issue (moves to trash)
+  comment <id-or-key> <text>      Add a comment to an issue
+
+Global Options:
+  --json       Output raw JSON
+  -h, --help   Show help
+
+Run 'linear-cli issue <action> --help' for action-specific help`)
+}
+function showIssueListHelp() {
+  console.log(`Usage: linear-cli issue list [options]
 
 List issues with filters
 
@@ -94,10 +131,15 @@ Options:
   --status <name>   Filter by status name
   --limit <n>       Limit results (default: 50)
   --json            Output raw JSON
-  -h, --help        Show help`)
+  -h, --help        Show help
+
+Examples:
+  linear-cli issue list
+  linear-cli issue list --team <team-id>
+  linear-cli issue list --status "In Progress" --limit 10`)
 }
-function showIssueHelp() {
-  console.log(`Usage: linear-cli issue <id-or-key> [options]
+function showIssueViewHelp() {
+  console.log(`Usage: linear-cli issue view <id-or-key> [options]
 
 Get detailed information about an issue
 
@@ -106,40 +148,14 @@ Arguments:
 
 Options:
   --json       Output raw JSON
-  -h, --help   Show help`)
+  -h, --help   Show help
+
+Examples:
+  linear-cli issue view ENG-123
+  linear-cli issue view <issue-uuid> --json`)
 }
-function showCommentHelp() {
-  console.log(`Usage: linear-cli comment <id-or-key> <text> [options]
-
-Add a comment to an issue
-
-Arguments:
-  id-or-key    Issue identifier (e.g., ENG-123 or full UUID)
-  text         Comment text
-
-Options:
-  --json       Output raw JSON (comment details)
-  -h, --help   Show help`)
-}
-function showUpdateHelp() {
-  console.log(`Usage: linear-cli update <id-or-key> [options]
-
-Update an issue
-
-Arguments:
-  id-or-key         Issue identifier (e.g., ENG-123 or full UUID)
-
-Options:
-  --status <name>   Update status
-  --assignee <id>   Update assignee (user ID)
-  --priority <n>    Update priority (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
-  --title <text>    Update title
-  --description <text>  Update description
-  --json            Output raw JSON
-  -h, --help        Show help`)
-}
-function showCreateHelp() {
-  console.log(`Usage: linear-cli create <title> [options]
+function showIssueCreateHelp() {
+  console.log(`Usage: linear-cli issue create <title> [options]
 
 Create a new issue
 
@@ -153,10 +169,35 @@ Options:
   --priority <n>        Priority (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
   --status <name>       Initial status name
   --json                Output raw JSON
-  -h, --help            Show help`)
+  -h, --help            Show help
+
+Examples:
+  linear-cli issue create "Fix bug" --team <team-id>
+  linear-cli issue create "New feature" --team <team-id> --description "Details" --priority 2`)
 }
-function showDeleteHelp() {
-  console.log(`Usage: linear-cli delete <id-or-key> [options]
+function showIssueUpdateHelp() {
+  console.log(`Usage: linear-cli issue update <id-or-key> [options]
+
+Update an issue
+
+Arguments:
+  id-or-key         Issue identifier (e.g., ENG-123 or full UUID)
+
+Options:
+  --status <name>   Update status
+  --assignee <id>   Update assignee (user ID)
+  --priority <n>    Update priority (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
+  --title <text>    Update title
+  --description <text>  Update description
+  --json            Output raw JSON
+  -h, --help        Show help
+
+Examples:
+  linear-cli issue update ENG-123 --status "In Progress"
+  linear-cli issue update ENG-123 --assignee <user-id> --priority 1`)
+}
+function showIssueDeleteHelp() {
+  console.log(`Usage: linear-cli issue delete <id-or-key> [options]
 
 Delete an issue (moves to trash)
 
@@ -165,7 +206,28 @@ Arguments:
 
 Options:
   --json       Output raw JSON
-  -h, --help   Show help`)
+  -h, --help   Show help
+
+Examples:
+  linear-cli issue delete ENG-123
+  linear-cli issue delete <issue-uuid>`)
+}
+function showIssueCommentHelp() {
+  console.log(`Usage: linear-cli issue comment <id-or-key> <text> [options]
+
+Add a comment to an issue
+
+Arguments:
+  id-or-key    Issue identifier (e.g., ENG-123 or full UUID)
+  text         Comment text
+
+Options:
+  --json       Output raw JSON (comment details)
+  -h, --help   Show help
+
+Examples:
+  linear-cli issue comment ENG-123 "This looks good"
+  linear-cli issue comment ENG-123 "Fixed in PR #42" --json`)
 }
 function getLinearClient() {
   const apiKey = process.env.LINEAR_API_KEY
@@ -594,103 +656,168 @@ async function deleteIssue(identifier, flags) {
   }
 }
 async function main() {
-  const { command, args, flags } = parseArgs(process.argv)
+  const { resource, action, args, flags } = parseArgs(process.argv)
+
+  // Handle help flags
   if (flags.h || flags.help) {
-    switch (command) {
-      case "users":
-        showUsersHelp()
+    if (!resource) {
+      showHelp()
+      process.exit(0)
+    }
+
+    switch (resource) {
+      case "user":
+        showUserHelp()
         break
-      case "teams":
-        showTeamsHelp()
+      case "team":
+        showTeamHelp()
         break
-      case "projects":
-        showProjectsHelp()
-        break
-      case "issues":
-        showIssuesHelp()
+      case "project":
+        showProjectHelp()
         break
       case "issue":
-        showIssueHelp()
-        break
-      case "create":
-        showCreateHelp()
-        break
-      case "comment":
-        showCommentHelp()
-        break
-      case "update":
-        showUpdateHelp()
-        break
-      case "delete":
-        showDeleteHelp()
+        if (!action) {
+          showIssueHelp()
+        } else {
+          switch (action) {
+            case "list":
+              showIssueListHelp()
+              break
+            case "view":
+              showIssueViewHelp()
+              break
+            case "create":
+              showIssueCreateHelp()
+              break
+            case "update":
+              showIssueUpdateHelp()
+              break
+            case "delete":
+              showIssueDeleteHelp()
+              break
+            case "comment":
+              showIssueCommentHelp()
+              break
+            default:
+              showIssueHelp()
+          }
+        }
         break
       default:
         showHelp()
     }
     process.exit(0)
   }
+
   try {
-    switch (command) {
-      case "users":
-        await listUsers(flags)
+    // Route commands
+    switch (resource) {
+      case "user":
+        if (action === "list") {
+          await listUsers(flags)
+        } else {
+          console.error(`Error: Unknown action '${action}' for resource 'user'
+
+Run 'linear-cli user --help' for usage`)
+          process.exit(1)
+        }
         break
-      case "teams":
-        await listTeams(flags)
+
+      case "team":
+        if (action === "list") {
+          await listTeams(flags)
+        } else {
+          console.error(`Error: Unknown action '${action}' for resource 'team'
+
+Run 'linear-cli team --help' for usage`)
+          process.exit(1)
+        }
         break
-      case "projects":
-        await listProjects(flags)
+
+      case "project":
+        if (action === "list") {
+          await listProjects(flags)
+        } else {
+          console.error(`Error: Unknown action '${action}' for resource 'project'
+
+Run 'linear-cli project --help' for usage`)
+          process.exit(1)
+        }
         break
-      case "issues":
-        await listIssues(flags)
-        break
+
       case "issue":
-        if (args.length === 0) {
-          console.error(`Error: Missing issue identifier
+        switch (action) {
+          case "list":
+            await listIssues(flags)
+            break
+
+          case "view":
+            if (args.length === 0) {
+              console.error(`Error: Missing issue identifier
+
+Run 'linear-cli issue view --help' for usage`)
+              process.exit(1)
+            }
+            await getIssue(args[0], flags)
+            break
+
+          case "create":
+            if (args.length === 0) {
+              console.error(`Error: Missing issue title
+
+Run 'linear-cli issue create --help' for usage`)
+              process.exit(1)
+            }
+            await createIssue(args.join(" "), flags)
+            break
+
+          case "update":
+            if (args.length === 0) {
+              console.error(`Error: Missing issue identifier
+
+Run 'linear-cli issue update --help' for usage`)
+              process.exit(1)
+            }
+            await updateIssue(args[0], flags)
+            break
+
+          case "delete":
+            if (args.length === 0) {
+              console.error(`Error: Missing issue identifier
+
+Run 'linear-cli issue delete --help' for usage`)
+              process.exit(1)
+            }
+            await deleteIssue(args[0], flags)
+            break
+
+          case "comment":
+            if (args.length < 2) {
+              console.error(`Error: Missing required arguments
+
+Run 'linear-cli issue comment --help' for usage`)
+              process.exit(1)
+            }
+            await addComment(args[0], args.slice(1).join(" "), flags)
+            break
+
+          default:
+            if (action) {
+              console.error(`Error: Unknown action '${action}' for resource 'issue'
 
 Run 'linear-cli issue --help' for usage`)
-          process.exit(1)
-        }
-        await getIssue(args[0], flags)
-        break
-      case "comment":
-        if (args.length < 2) {
-          console.error(`Error: Missing required arguments
+            } else {
+              console.error(`Error: Missing action for resource 'issue'
 
-Run 'linear-cli comment --help' for usage`)
-          process.exit(1)
+Run 'linear-cli issue --help' for usage`)
+            }
+            process.exit(1)
         }
-        await addComment(args[0], args.slice(1).join(" "), flags)
         break
-      case "create":
-        if (args.length === 0) {
-          console.error(`Error: Missing issue title
 
-Run 'linear-cli create --help' for usage`)
-          process.exit(1)
-        }
-        await createIssue(args.join(" "), flags)
-        break
-      case "update":
-        if (args.length === 0) {
-          console.error(`Error: Missing issue identifier
-
-Run 'linear-cli update --help' for usage`)
-          process.exit(1)
-        }
-        await updateIssue(args[0], flags)
-        break
-      case "delete":
-        if (args.length === 0) {
-          console.error(`Error: Missing issue identifier
-
-Run 'linear-cli delete --help' for usage`)
-          process.exit(1)
-        }
-        await deleteIssue(args[0], flags)
-        break
       default:
-        if (command) {
-          console.error(`Error: Unknown command '${command}'
+        if (resource) {
+          console.error(`Error: Unknown resource '${resource}'
 
 Run 'linear-cli --help' for usage`)
           process.exit(1)

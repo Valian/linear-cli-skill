@@ -34,11 +34,17 @@ Before using the Linear CLI, ensure the API key is configured:
 
 **Note:** All commands assume you are in the skill directory. The CLI executable is `./linear`.
 
-Execute commands using:
+Execute commands using the pattern: **resource → action**
 
 ```bash
-./linear <command> [options]
+./linear <resource> <action> [arguments] [options]
 ```
+
+Available resources:
+- `issue` - Work with issues (list, view, create, update, delete, comment)
+- `user` - Work with users (list)
+- `team` - Work with teams (list)
+- `project` - Work with projects (list)
 
 Dependencies install automatically on first run.
 
@@ -49,7 +55,7 @@ Dependencies install automatically on first run.
 Get all users in the workspace:
 
 ```bash
-./linear users
+./linear user list
 ```
 
 **Output format:**
@@ -61,7 +67,7 @@ Users
 
 **Example:**
 ```bash
-./linear users
+./linear user list
 # Output:
 # Users
 #
@@ -78,7 +84,7 @@ Users
 Get all teams in the workspace:
 
 ```bash
-./linear teams
+./linear team list
 ```
 
 **Output format:**
@@ -90,7 +96,7 @@ Teams
 
 **Example:**
 ```bash
-./linear teams
+./linear team list
 # Output:
 # Teams
 #
@@ -107,7 +113,7 @@ Teams
 Get all projects in the workspace:
 
 ```bash
-./linear projects
+./linear project list
 ```
 
 **Output format:**
@@ -119,7 +125,7 @@ Projects
 
 **Example:**
 ```bash
-./linear projects
+./linear project list
 # Output:
 # Projects
 #
@@ -136,7 +142,7 @@ Projects
 Get issues with optional filters:
 
 ```bash
-./linear issues [options]
+./linear issue list [options]
 ```
 
 **Options:**
@@ -156,7 +162,7 @@ Issues
 
 List recent issues (default 50):
 ```bash
-./linear issues
+./linear issue list
 # Output:
 # Issues
 #
@@ -166,29 +172,29 @@ List recent issues (default 50):
 
 Filter by team:
 ```bash
-./linear issues --team abc123 --limit 10
+./linear issue list --team abc123 --limit 10
 ```
 
 Filter by assignee and status:
 ```bash
-./linear issues --assignee def456 --status "In Progress"
+./linear issue list --assignee def456 --status "In Progress"
 ```
 
 Combine filters:
 ```bash
-./linear issues --team abc123 --assignee def456 --status "Ready" --limit 5
+./linear issue list --team abc123 --assignee def456 --status "Ready" --limit 5
 ```
 
 **Use when:** You need to see what issues exist, what someone is working on, or issues in a specific state.
 
 ---
 
-### Get Issue Details
+### View Issue Details
 
 Get detailed information about a specific issue:
 
 ```bash
-./linear issue <id-or-key>
+./linear issue view <id-or-key>
 ```
 
 **Arguments:**
@@ -203,7 +209,7 @@ Get detailed information about a specific issue:
 
 **Example:**
 ```bash
-./linear issue ENG-123
+./linear issue view ENG-123
 # Output:
 # Issue: #ENG-123
 #
@@ -233,7 +239,7 @@ Get detailed information about a specific issue:
 Create a new issue:
 
 ```bash
-./linear create <title> [options]
+./linear issue create <title> [options]
 ```
 
 **Arguments:**
@@ -250,7 +256,7 @@ Create a new issue:
 
 Create basic issue:
 ```bash
-./linear create "Fix login bug" --team abc123
+./linear issue create "Fix login bug" --team abc123
 # Output:
 # ✓ Issue created: #ENG-124
 #   Title: Fix login bug
@@ -259,7 +265,7 @@ Create basic issue:
 
 Create with full details:
 ```bash
-./linear create "Implement dark mode" --team abc123 --description "Add dark mode support to the app" --assignee def456 --priority 2 --status "Ready"
+./linear issue create "Implement dark mode" --team abc123 --description "Add dark mode support to the app" --assignee def456 --priority 2 --status "Ready"
 # Output:
 # ✓ Issue created: #ENG-125
 #   Title: Implement dark mode
@@ -268,12 +274,12 @@ Create with full details:
 
 Multi-word titles work without quotes:
 ```bash
-./linear create Fix login bug on mobile --team abc123
+./linear issue create Fix login bug on mobile --team abc123
 ```
 
 **Use when:** You need to create a new issue from the command line.
 
-**Note:** The `--team` flag is required. Get team IDs using `./linear teams`.
+**Note:** The `--team` flag is required. Get team IDs using `./linear team list`.
 
 ---
 
@@ -282,7 +288,7 @@ Multi-word titles work without quotes:
 Add a comment to an issue:
 
 ```bash
-./linear comment <id-or-key> <text>
+./linear issue comment <id-or-key> <text>
 ```
 
 **Arguments:**
@@ -291,14 +297,14 @@ Add a comment to an issue:
 
 **Example:**
 ```bash
-./linear comment ENG-123 "Fix deployed to staging"
+./linear issue comment ENG-123 "Fix deployed to staging"
 # Output:
 # ✓ Comment added to #ENG-123
 ```
 
 Multi-word comments work without quotes:
 ```bash
-./linear comment ENG-123 This is a test comment
+./linear issue comment ENG-123 This is a test comment
 ```
 
 **Use when:** You need to add context, updates, or questions to an issue.
@@ -310,7 +316,7 @@ Multi-word comments work without quotes:
 Update issue fields:
 
 ```bash
-./linear update <id-or-key> [options]
+./linear issue update <id-or-key> [options]
 ```
 
 **Arguments:**
@@ -329,19 +335,19 @@ Multiple fields can be updated in one command.
 
 Update status:
 ```bash
-./linear update ENG-123 --status "Done"
+./linear issue update ENG-123 --status "Done"
 # Output:
 # ✓ Issue #ENG-123 updated
 ```
 
 Update assignee:
 ```bash
-./linear update ENG-123 --assignee abc123
+./linear issue update ENG-123 --assignee abc123
 ```
 
 Update multiple fields:
 ```bash
-./linear update ENG-123 --status "In Progress" --assignee abc123 --priority 1
+./linear issue update ENG-123 --status "In Progress" --assignee abc123 --priority 1
 ```
 
 **Use when:** You need to change issue status, reassign, or update other fields.
@@ -353,7 +359,7 @@ Update multiple fields:
 Delete an issue (moves to trash):
 
 ```bash
-./linear delete <id-or-key>
+./linear issue delete <id-or-key>
 ```
 
 **Arguments:**
@@ -361,7 +367,7 @@ Delete an issue (moves to trash):
 
 **Example:**
 ```bash
-./linear delete ENG-123
+./linear issue delete ENG-123
 # Output:
 # ✓ Issue #ENG-123 deleted (moved to trash)
 ```
@@ -377,8 +383,8 @@ Delete an issue (moves to trash):
 All commands support `--json` flag for machine-readable output:
 
 ```bash
-./linear teams --json
-./linear issue ENG-123 --json
+./linear team list --json
+./linear issue view ENG-123 --json
 ```
 
 Use this when you need to parse output programmatically or want complete data structures.
@@ -391,8 +397,9 @@ Every command has built-in help:
 
 ```bash
 ./linear --help
-./linear issues --help
-./linear update --help
+./linear issue --help
+./linear issue list --help
+./linear issue update --help
 ```
 
 ---
@@ -403,73 +410,73 @@ Every command has built-in help:
 
 ```bash
 # 1. Find issues by status
-./linear issues --status "Ready" --limit 5
+./linear issue list --status "Ready" --limit 5
 
 # 2. Get details about specific issue
-./linear issue ENG-123
+./linear issue view ENG-123
 
 # 3. Start working on it
-./linear update ENG-123 --status "In Progress"
+./linear issue update ENG-123 --status "In Progress"
 
 # 4. Add progress update
-./linear comment ENG-123 "Implemented the fix, testing now"
+./linear issue comment ENG-123 "Implemented the fix, testing now"
 
 # 5. Mark as done
-./linear update ENG-123 --status "Done"
+./linear issue update ENG-123 --status "Done"
 ```
 
 ### Check team workload
 
 ```bash
 # 1. Get team ID
-./linear teams
+./linear team list
 
 # 2. See all team issues
-./linear issues --team <team-id>
+./linear issue list --team <team-id>
 
 # 3. Filter by status
-./linear issues --team <team-id> --status "In Progress"
+./linear issue list --team <team-id> --status "In Progress"
 ```
 
 ### Check assignee's work
 
 ```bash
 # 1. Get user ID
-./linear users
+./linear user list
 
 # 2. See their issues
-./linear issues --assignee <user-id>
+./linear issue list --assignee <user-id>
 
 # 3. Get details on specific issue
-./linear issue ENG-123
+./linear issue view ENG-123
 ```
 
 ### Create and track a new issue
 
 ```bash
 # 1. Get team ID
-./linear teams
+./linear team list
 
 # 2. Create new issue
-./linear create "Implement new feature" --team <team-id> --description "Detailed description here" --priority 2
+./linear issue create "Implement new feature" --team <team-id> --description "Detailed description here" --priority 2
 
 # 3. Note the issue ID from output (e.g., ENG-124)
 
 # 4. Add updates as you work
-./linear comment ENG-124 "Started implementation"
+./linear issue comment ENG-124 "Started implementation"
 
 # 5. Update status when ready
-./linear update ENG-124 --status "Done"
+./linear issue update ENG-124 --status "Done"
 ```
 
 ### Clean up old issues
 
 ```bash
 # 1. Find old issues
-./linear issues --status "Canceled" --limit 10
+./linear issue list --status "Canceled" --limit 10
 
 # 2. Delete unwanted issues
-./linear delete ENG-999
+./linear issue delete ENG-999
 
 # Note: Issues move to trash and can be recovered
 ```

@@ -59,8 +59,8 @@ LINEAR_API_KEY=your-api-key
 echo 'LINEAR_API_KEY=your-api-key' > linear/.env
 
 # Run the CLI
-./linear/linear teams
-./linear/linear issues --limit 5
+./linear/linear team list
+./linear/linear issue list --limit 5
 ```
 
 ## Usage
@@ -68,109 +68,119 @@ echo 'LINEAR_API_KEY=your-api-key' > linear/.env
 Run the CLI using the `linear` executable:
 
 ```bash
-./linear/linear <command> [options]
+./linear/linear <resource> <action> [arguments] [options]
 ```
 
 Or via npm from the `linear/` directory:
 
 ```bash
 cd linear/
-npm run cli -- <command> [options]
+npm run cli -- <resource> <action> [arguments] [options]
 ```
+
+### Resources
+
+The CLI follows the pattern: `resource → action`, similar to the GitHub CLI.
+
+Available resources:
+- `issue` - Work with issues (list, view, create, update, delete, comment)
+- `user` - Work with users (list)
+- `team` - Work with teams (list)
+- `project` - Work with projects (list)
 
 ### Commands
 
 #### List Users
 ```bash
-./linear users
-./linear users --json
+./linear user list
+./linear user list --json
 ```
 
 #### List Teams
 ```bash
-./linear teams
-./linear teams --json
+./linear team list
+./linear team list --json
 ```
 
 #### List Projects
 ```bash
-./linear projects
-./linear projects --json
+./linear project list
+./linear project list --json
 ```
 
 #### List Issues
 ```bash
 # List all issues (default limit: 50)
-./linear issues
+./linear issue list
 
 # Filter by team
-./linear issues --team <team-id>
+./linear issue list --team <team-id>
 
 # Filter by assignee
-./linear issues --assignee <user-id>
+./linear issue list --assignee <user-id>
 
 # Filter by status
-./linear issues --status "In Progress"
+./linear issue list --status "In Progress"
 
 # Combine filters
-./linear issues --team <team-id> --assignee <user-id> --status "Ready" --limit 10
+./linear issue list --team <team-id> --assignee <user-id> --status "Ready" --limit 10
 
 # JSON output
-./linear issues --json
+./linear issue list --json
 ```
 
-#### Get Issue Details
+#### View Issue Details
 ```bash
 # Using issue identifier (e.g., MIN-892)
-./linear issue MIN-892
+./linear issue view MIN-892
 
 # Using issue UUID
-./linear issue <issue-uuid>
+./linear issue view <issue-uuid>
 
 # JSON output
-./linear issue MIN-892 --json
+./linear issue view MIN-892 --json
 ```
 
 #### Create Issue
 ```bash
 # Create basic issue (--team is required)
-./linear create "Fix login bug" --team <team-id>
+./linear issue create "Fix login bug" --team <team-id>
 
 # Create with full details
-./linear create "New feature" --team <team-id> --description "Details here" --assignee <user-id> --priority 2 --status "Ready"
+./linear issue create "New feature" --team <team-id> --description "Details here" --assignee <user-id> --priority 2 --status "Ready"
 ```
 
-#### Add Comment
+#### Add Comment to Issue
 ```bash
-./linear comment MIN-892 "Your comment text here"
-./linear comment MIN-892 "Multi word comment"
+./linear issue comment MIN-892 "Your comment text here"
+./linear issue comment MIN-892 "Multi word comment"
 ```
 
 #### Update Issue
 ```bash
 # Update status
-./linear update MIN-892 --status "Done"
+./linear issue update MIN-892 --status "Done"
 
 # Update assignee
-./linear update MIN-892 --assignee <user-id>
+./linear issue update MIN-892 --assignee <user-id>
 
 # Update priority (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
-./linear update MIN-892 --priority 1
+./linear issue update MIN-892 --priority 1
 
 # Update title
-./linear update MIN-892 --title "New title"
+./linear issue update MIN-892 --title "New title"
 
 # Update description
-./linear update MIN-892 --description "New description"
+./linear issue update MIN-892 --description "New description"
 
 # Update multiple fields
-./linear update MIN-892 --status "In Progress" --assignee <user-id> --priority 2
+./linear issue update MIN-892 --status "In Progress" --assignee <user-id> --priority 2
 ```
 
 #### Delete Issue
 ```bash
 # Delete issue (moves to trash)
-./linear delete MIN-892
+./linear issue delete MIN-892
 ```
 
 ### Help
@@ -179,16 +189,19 @@ npm run cli -- <command> [options]
 # General help
 ./linear --help
 
-# Command-specific help
-./linear users --help
-./linear teams --help
-./linear projects --help
-./linear issues --help
+# Resource-specific help
+./linear user --help
+./linear team --help
+./linear project --help
 ./linear issue --help
-./linear create --help
-./linear comment --help
-./linear update --help
-./linear delete --help
+
+# Action-specific help
+./linear issue list --help
+./linear issue view --help
+./linear issue create --help
+./linear issue update --help
+./linear issue delete --help
+./linear issue comment --help
 ```
 
 ## Output Format
@@ -209,20 +222,20 @@ Use `--json` for machine-readable JSON output.
 
 ```bash
 # Get team ID
-./linear teams
+./linear team list
 # Output: #28adfef1-7a2b-4908-b563-089fed6dd71a	Mind Nexus	MIN
 
 # List issues for that team
-./linear issues --team 28adfef1-7a2b-4908-b563-089fed6dd71a --limit 5
+./linear issue list --team 28adfef1-7a2b-4908-b563-089fed6dd71a --limit 5
 
 # Get issue details
-./linear issue MIN-892
+./linear issue view MIN-892
 
 # Add a comment
-./linear comment MIN-892 "Working on this now"
+./linear issue comment MIN-892 "Working on this now"
 
 # Update status
-./linear update MIN-892 --status "Done"
+./linear issue update MIN-892 --status "Done"
 ```
 
 ## Error Handling
