@@ -2,6 +2,8 @@
 
 A Claude skill that provides a lightweight CLI for working with Linear issues. Written in JavaScript with minimal dependencies (only Linear SDK and dotenv).
 
+Following GitHub CLI conventions for consistency and ease of use.
+
 ## What's included
 
 - **`linear/`** - Standalone CLI tool with minimal dependencies
@@ -150,7 +152,24 @@ Available resources:
 ./linear issue create "Fix login bug" --team <team-id>
 
 # Create with full details
-./linear issue create "New feature" --team <team-id> --description "Details here" --assignee <user-id> --priority 2 --status "Ready"
+./linear issue create "New feature" --team <team-id> --body "Details here" --assignee @me --priority 2 --status "Todo"
+
+# With labels (multiple ways)
+./linear issue create "Bug fix" --team <team-id> --label bug --label urgent
+./linear issue create "Feature" --team <team-id> --label "bug,p0,feature"
+
+# With project assignment
+./linear issue create "Task" --team <team-id> --project <project-id>
+
+# Create sub-issue
+./linear issue create "Subtask" --team <team-id> --parent PROJ-123
+
+# With estimate and due date
+./linear issue create "Sprint task" --team <team-id> --estimate 5 --due-date 2025-12-31
+
+# Read description from file or stdin
+./linear issue create "Issue" --team <team-id> --body-file description.md
+echo "Long description" | ./linear issue create "Issue" --team <team-id> --body-file -
 ```
 
 #### Add Comment to Issue
@@ -161,23 +180,39 @@ Available resources:
 
 #### Update Issue
 ```bash
-# Update status
+# Update status (common: "Backlog", "Todo", "In Progress", "Done", "Canceled")
 ./linear issue update MIN-892 --status "Done"
 
-# Update assignee
-./linear issue update MIN-892 --assignee <user-id>
+# Update assignee (use @me for yourself)
+./linear issue update MIN-892 --assignee @me
 
-# Update priority (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
+# Update priority (0=None, 1=Urgent/P0, 2=High/P1, 3=Medium/P2, 4=Low/P3)
 ./linear issue update MIN-892 --priority 1
 
 # Update title
 ./linear issue update MIN-892 --title "New title"
 
 # Update description
-./linear issue update MIN-892 --description "New description"
+./linear issue update MIN-892 --body "New description"
+
+# Read description from file or stdin
+./linear issue update MIN-892 --body-file description.md
+echo "Updated description" | ./linear issue update MIN-892 --body-file -
+
+# Add labels
+./linear issue update MIN-892 --label bug --label urgent
+
+# Assign to project
+./linear issue update MIN-892 --project <project-id>
+
+# Set parent issue (create sub-issue)
+./linear issue update MIN-892 --parent PROJ-123
+
+# Set estimate and due date
+./linear issue update MIN-892 --estimate 5 --due-date 2025-12-31
 
 # Update multiple fields
-./linear issue update MIN-892 --status "In Progress" --assignee <user-id> --priority 2
+./linear issue update MIN-892 --status "In Progress" --assignee @me --priority 2 --label bug
 ```
 
 #### Delete Issue
@@ -206,6 +241,64 @@ Available resources:
 ./linear issue delete --help
 ./linear issue comment --help
 ```
+
+## Advanced Features
+
+### Labels
+Add labels to issues using `--label`:
+```bash
+# Multiple labels (separate flags)
+./linear issue create "Title" --team <team-id> --label bug --label urgent
+
+# Multiple labels (comma-separated)
+./linear issue create "Title" --team <team-id> --label "bug,urgent,p0"
+```
+
+**Note:** Labels must exist in the team before use. If a label doesn't exist, the CLI will error and display all available labels for that team.
+
+### Reading from Files or Stdin
+Use `--body-file` to read descriptions from files or stdin (following `gh` CLI conventions):
+```bash
+# From file
+./linear issue create "Title" --team <team-id> --body-file description.md
+
+# From stdin
+echo "Description text" | ./linear issue create "Title" --team <team-id> --body-file -
+cat description.md | ./linear issue create "Title" --team <team-id> --body-file -
+```
+
+### Assignee Shortcuts
+Use `@me` to assign issues to yourself:
+```bash
+./linear issue create "Title" --team <team-id> --assignee @me
+./linear issue update PROJ-123 --assignee @me
+```
+
+### Sub-issues
+Create hierarchical issues with `--parent`:
+```bash
+./linear issue create "Subtask" --team <team-id> --parent PROJ-123
+```
+
+### Project Assignment
+Assign issues to projects:
+```bash
+./linear issue create "Task" --team <team-id> --project <project-id>
+```
+
+### Estimates and Due Dates
+Set story points and due dates:
+```bash
+./linear issue create "Sprint task" --team <team-id> --estimate 5 --due-date 2025-12-31
+```
+
+### Priority Levels
+Priority mapping (matches Linear's API):
+- `0` = None
+- `1` = Urgent (P0)
+- `2` = High (P1)
+- `3` = Medium (P2)
+- `4` = Low (P3)
 
 ## Output Format
 

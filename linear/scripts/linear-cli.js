@@ -3,6 +3,7 @@ import { LinearClient } from "@linear/sdk"
 import { config } from "dotenv"
 import { fileURLToPath } from "url"
 import { dirname, join } from "path"
+import { readFileSync } from "fs"
 // Get the directory of the linear executable (parent of scripts/)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -20,7 +21,16 @@ function parseArgs(argv) {
       const key = arg.slice(2)
       const nextArg = argv[i + 1]
       if (nextArg && !nextArg.startsWith("-")) {
-        flags[key] = nextArg
+        // Support multiple values for the same flag (e.g., --label foo --label bar)
+        if (flags[key]) {
+          // Convert to array if not already
+          if (!Array.isArray(flags[key])) {
+            flags[key] = [flags[key]]
+          }
+          flags[key].push(nextArg)
+        } else {
+          flags[key] = nextArg
+        }
         i++
       } else {
         flags[key] = true
@@ -164,16 +174,25 @@ Arguments:
 
 Options:
   --team <id>           Team ID (required)
-  --description <text>  Issue description
-  --assignee <id>       Assignee user ID
-  --priority <n>        Priority (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
-  --status <name>       Initial status name
+  --body <text>         Issue description (use --body-file for long text)
+  --body-file <file>    Read description from file (use "-" for stdin)
+  --assignee <id>       Assignee user ID (use "@me" for yourself)
+  --label <name>        Label name(s) - can be specified multiple times or comma-separated
+  --project <id>        Project ID to assign the issue to
+  --parent <id>         Parent issue ID (for creating sub-issues)
+  --priority <n>        Priority (0=None, 1=Urgent/P0, 2=High/P1, 3=Medium/P2, 4=Low/P3)
+  --estimate <n>        Story point estimate
+  --due-date <date>     Due date (YYYY-MM-DD format)
+  --status <name>       Initial status (e.g. "Backlog", "Todo", "In Progress")
   --json                Output raw JSON
   -h, --help            Show help
 
 Examples:
   linear-cli issue create "Fix bug" --team <team-id>
-  linear-cli issue create "New feature" --team <team-id> --description "Details" --priority 2`)
+  linear-cli issue create "New feature" --team <team-id> --body "Details" --priority 2
+  linear-cli issue create "Task" --team <team-id> --label bug --label p0
+  echo "Long description" | linear-cli issue create "Title" --team <team-id> --body-file -
+  linear-cli issue create "Sub-task" --team <team-id> --parent PROJ-123 --assignee @me`)
 }
 function showIssueUpdateHelp() {
   console.log(`Usage: linear-cli issue update <id-or-key> [options]
@@ -181,20 +200,27 @@ function showIssueUpdateHelp() {
 Update an issue
 
 Arguments:
-  id-or-key         Issue identifier (e.g., ENG-123 or full UUID)
+  id-or-key             Issue identifier (e.g., ENG-123 or full UUID)
 
 Options:
-  --status <name>   Update status
-  --assignee <id>   Update assignee (user ID)
-  --priority <n>    Update priority (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
-  --title <text>    Update title
-  --description <text>  Update description
-  --json            Output raw JSON
-  -h, --help        Show help
+  --status <name>       Update status
+  --assignee <id>       Update assignee (use "@me" for yourself)
+  --priority <n>        Update priority (0=None, 1=Urgent/P0, 2=High/P1, 3=Medium/P2, 4=Low/P3)
+  --title <text>        Update title
+  --body <text>         Update description
+  --body-file <file>    Read description from file (use "-" for stdin)
+  --label <name>        Add label(s) - can be specified multiple times or comma-separated
+  --project <id>        Assign to project
+  --parent <id>         Set parent issue (for creating sub-issues)
+  --estimate <n>        Update story point estimate
+  --due-date <date>     Set due date (YYYY-MM-DD format)
+  --json                Output raw JSON
+  -h, --help            Show help
 
 Examples:
   linear-cli issue update ENG-123 --status "In Progress"
-  linear-cli issue update ENG-123 --assignee <user-id> --priority 1`)
+  linear-cli issue update ENG-123 --assignee @me --priority 1
+  linear-cli issue update ENG-123 --label bug --label urgent`)
 }
 function showIssueDeleteHelp() {
   console.log(`Usage: linear-cli issue delete <id-or-key> [options]
@@ -256,6 +282,103 @@ Make sure @linear/sdk is installed:
   npm install`)
     process.exit(1)
   }
+}
+
+// Helper to read file or stdin
+function readBodyFile(path) {
+  if (path === "-" || path === true) {
+    // Read from stdin (path might be true if --body-file is passed without value)
+    try {
+      return readFileSync(0, "utf-8")
+    } catch (error) {
+      console.error("Error: Could not read from stdin")
+      process.exit(1)
+    }
+  } else {
+    // Read from file
+    try {
+      return readFileSync(path, "utf-8")
+    } catch (error) {
+      console.error(`Error: Could not read file: ${path}`)
+      process.exit(1)
+    }
+  }
+}
+
+// Helper to parse label input (supports comma-separated or array)
+function parseLabels(labelInput) {
+  if (!labelInput) return []
+
+  const labels = Array.isArray(labelInput) ? labelInput : [labelInput]
+  const result = []
+
+  for (const label of labels) {
+    // Split by comma in case user does --label "bug,feature"
+    const split = label.split(",").map((l) => l.trim()).filter(Boolean)
+    result.push(...split)
+  }
+
+  return result
+}
+
+// Helper to resolve assignee (handle @me)
+async function resolveAssignee(client, assigneeInput) {
+  if (!assigneeInput) return null
+  if (assigneeInput === "@me") {
+    const viewer = await client.viewer
+    return viewer.id
+  }
+  return assigneeInput
+}
+
+// Helper to find labels by name for a team
+async function findLabels(client, teamId, labelNames) {
+  const graphQLClient = client.client
+
+  // Get all labels for the team
+  const response = await graphQLClient.rawRequest(
+    `query getTeamLabels($teamId: String!) {
+      team(id: $teamId) {
+        labels {
+          nodes {
+            id
+            name
+          }
+        }
+      }
+    }`,
+    { teamId }
+  )
+
+  const availableLabels = response.data.team.labels.nodes
+  const labelIds = []
+  const notFound = []
+
+  for (const labelName of labelNames) {
+    const label = availableLabels.find(
+      (l) => l.name.toLowerCase() === labelName.toLowerCase()
+    )
+    if (label) {
+      labelIds.push(label.id)
+    } else {
+      notFound.push(labelName)
+    }
+  }
+
+  if (notFound.length > 0) {
+    console.error(`Error: Label(s) not found: ${notFound.join(", ")}`)
+    console.error(`\nAvailable labels for this team:`)
+    if (availableLabels.length === 0) {
+      console.error("  (no labels available)")
+    } else {
+      for (const label of availableLabels) {
+        console.error(`  - ${label.name}`)
+      }
+    }
+    process.exit(1)
+  }
+
+  return labelIds
 }
 async function listUsers(flags) {
   const client = getLinearClient()
@@ -366,6 +489,8 @@ async function getIssue(identifier, flags) {
               title
               description
               priority
+              estimate
+              dueDate
               createdAt
               updatedAt
               state {
@@ -378,6 +503,14 @@ async function getIssue(identifier, flags) {
               team {
                 name
                 key
+              }
+              parent {
+                identifier
+                title
+              }
+              project {
+                id
+                name
               }
               labels {
                 nodes {
@@ -409,6 +542,8 @@ async function getIssue(identifier, flags) {
             title
             description
             priority
+            estimate
+            dueDate
             createdAt
             updatedAt
             state {
@@ -421,6 +556,14 @@ async function getIssue(identifier, flags) {
             team {
               name
               key
+            }
+            parent {
+              identifier
+              title
+            }
+            project {
+              id
+              name
             }
             labels {
               nodes {
@@ -459,10 +602,10 @@ async function getIssue(identifier, flags) {
 
   const priorityMap = {
     0: "None",
-    1: "Urgent",
-    2: "High",
-    3: "Medium",
-    4: "Low",
+    1: "Urgent (P0)",
+    2: "High (P1)",
+    3: "Medium (P2)",
+    4: "Low (P3)",
   }
 
   console.log(`Issue: #${issue.identifier}\n`)
@@ -472,6 +615,18 @@ async function getIssue(identifier, flags) {
   console.log(`Team:\t\t${issue.team.name} (${issue.team.key})`)
   console.log(`Priority:\t${priorityMap[issue.priority] || "None"}`)
   console.log(`Labels:\t\t${issue.labels.nodes.map((l) => l.name).join(", ") || "None"}`)
+  if (issue.parent) {
+    console.log(`Parent:\t\t#${issue.parent.identifier} - ${issue.parent.title}`)
+  }
+  if (issue.project) {
+    console.log(`Project:\t${issue.project.name}`)
+  }
+  if (issue.estimate) {
+    console.log(`Estimate:\t${issue.estimate} points`)
+  }
+  if (issue.dueDate) {
+    console.log(`Due Date:\t${issue.dueDate}`)
+  }
   console.log(`Created:\t${new Date(issue.createdAt).toISOString().split("T")[0]}`)
   console.log(`Updated:\t${new Date(issue.updatedAt).toISOString().split("T")[0]}`)
 
@@ -538,6 +693,8 @@ async function updateIssue(identifier, flags) {
     process.exit(1)
   }
   const updates = {}
+
+  // Handle status
   if (flags.status) {
     // Find state by name
     const team = await issue.team
@@ -550,18 +707,81 @@ async function updateIssue(identifier, flags) {
       process.exit(1)
     }
   }
-  if (flags.assignee) {
-    updates.assigneeId = flags.assignee
+
+  // Handle assignee with @me support
+  const assigneeId = await resolveAssignee(client, flags.assignee)
+  if (assigneeId) {
+    updates.assigneeId = assigneeId
   }
+
+  // Handle priority
   if (flags.priority !== undefined) {
     updates.priority = parseInt(flags.priority, 10)
   }
+
+  // Handle title
   if (flags.title) {
     updates.title = flags.title
   }
-  if (flags.description) {
-    updates.description = flags.description
+
+  // Handle body/description
+  if (flags["body-file"]) {
+    updates.description = readBodyFile(flags["body-file"])
+  } else if (flags.body) {
+    updates.description = flags.body
   }
+
+  // Handle labels
+  const labelNames = parseLabels(flags.label)
+  if (labelNames.length > 0) {
+    const team = await issue.team
+    const labelIds = await findLabels(client, team.id, labelNames)
+    updates.labelIds = labelIds
+  }
+
+  // Handle project
+  if (flags.project) {
+    updates.projectId = flags.project
+  }
+
+  // Handle parent
+  if (flags.parent) {
+    let parentIssue
+    try {
+      if (flags.parent.includes("-")) {
+        const issues = await client.issues({
+          filter: { number: { eq: parseInt(flags.parent.split("-")[1]) } },
+        })
+        parentIssue = issues.nodes.find((i) => i.identifier === flags.parent.toUpperCase())
+      } else {
+        parentIssue = await client.issue(flags.parent)
+      }
+    } catch (error) {
+      console.error(`Error: Parent issue not found: ${flags.parent}`)
+      process.exit(1)
+    }
+    if (!parentIssue) {
+      console.error(`Error: Parent issue not found: ${flags.parent}`)
+      process.exit(1)
+    }
+    updates.parentId = parentIssue.id
+  }
+
+  // Handle estimate
+  if (flags.estimate !== undefined) {
+    updates.estimate = parseFloat(flags.estimate)
+  }
+
+  // Handle due date
+  if (flags["due-date"]) {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(flags["due-date"])) {
+      console.error(`Error: Invalid date format. Use YYYY-MM-DD (e.g., 2025-12-31)`)
+      process.exit(1)
+    }
+    updates.dueDate = flags["due-date"]
+  }
+
   if (Object.keys(updates).length === 0) {
     console.error(`Error: No updates specified
 
@@ -588,15 +808,78 @@ Run 'linear-cli create --help' for usage`)
     teamId: flags.team,
     title,
   }
-  if (flags.description) {
-    input.description = flags.description
+
+  // Handle body/description
+  if (flags["body-file"]) {
+    input.description = readBodyFile(flags["body-file"])
+  } else if (flags.body) {
+    input.description = flags.body
   }
-  if (flags.assignee) {
-    input.assigneeId = flags.assignee
+
+  // Handle assignee with @me support
+  const assigneeId = await resolveAssignee(client, flags.assignee)
+  if (assigneeId) {
+    input.assigneeId = assigneeId
   }
+
+  // Handle labels
+  const labelNames = parseLabels(flags.label)
+  if (labelNames.length > 0) {
+    const labelIds = await findLabels(client, flags.team, labelNames)
+    input.labelIds = labelIds
+  }
+
+  // Handle project
+  if (flags.project) {
+    input.projectId = flags.project
+  }
+
+  // Handle parent (for sub-issues)
+  if (flags.parent) {
+    // Need to resolve parent identifier to ID
+    let parentIssue
+    try {
+      if (flags.parent.includes("-")) {
+        const issues = await client.issues({
+          filter: { number: { eq: parseInt(flags.parent.split("-")[1]) } },
+        })
+        parentIssue = issues.nodes.find((i) => i.identifier === flags.parent.toUpperCase())
+      } else {
+        parentIssue = await client.issue(flags.parent)
+      }
+    } catch (error) {
+      console.error(`Error: Parent issue not found: ${flags.parent}`)
+      process.exit(1)
+    }
+    if (!parentIssue) {
+      console.error(`Error: Parent issue not found: ${flags.parent}`)
+      process.exit(1)
+    }
+    input.parentId = parentIssue.id
+  }
+
+  // Handle priority
   if (flags.priority !== undefined) {
     input.priority = parseInt(flags.priority, 10)
   }
+
+  // Handle estimate
+  if (flags.estimate !== undefined) {
+    input.estimate = parseFloat(flags.estimate)
+  }
+
+  // Handle due date
+  if (flags["due-date"]) {
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(flags["due-date"])) {
+      console.error(`Error: Invalid date format. Use YYYY-MM-DD (e.g., 2025-12-31)`)
+      process.exit(1)
+    }
+    input.dueDate = flags["due-date"]
+  }
+
+  // Handle status
   if (flags.status) {
     // Find state by name
     const team = await client.team(flags.team)
@@ -609,6 +892,7 @@ Run 'linear-cli create --help' for usage`)
       process.exit(1)
     }
   }
+
   const response = await client.createIssue(input)
   const issue = await response.issue
   if (!issue) {
