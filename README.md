@@ -11,11 +11,14 @@ A Claude skill that provides a lightweight CLI for working with Linear issues. W
 
 ## Installation in Claude
 
-This skill can be installed in Claude Code using the marketplace definition:
+Install this skill in Claude Code using the plugin marketplace:
 
-1. Copy the repository URL
-2. In Claude Code, install the skill using the marketplace.json
-3. The skill will be available for use with Linear commands
+```bash
+claude plugin marketplace add Valian/linear-cli-skill
+claude plugin install linear
+```
+
+The skill will then be available for working with Linear issues directly through Claude.
 
 ## Installation
 
