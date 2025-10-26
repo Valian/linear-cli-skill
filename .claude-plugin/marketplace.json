@@ -6,16 +6,16 @@
   },
   "metadata": {
     "description": "Lightweight CLI for working with Linear issues using the official Linear TypeScript SDK",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "plugins": [
     {
       "name": "linear",
       "description": "Work with Linear issues, teams, projects, and users via CLI",
-      "source": "./linear",
+      "source": "./",
       "strict": false,
       "skills": [
-        "./SKILL.md"
+        "./linear"
       ]
     }
   ]
