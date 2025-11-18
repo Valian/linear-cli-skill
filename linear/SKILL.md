@@ -103,7 +103,7 @@ Multi-word text auto-combined. No quotes needed.
 - `--assignee <id>` - Update assignee
 - `--priority <n>` - Update priority
 - `--title <text>` - Update title
-- `--description <text>` - Update description
+- `--body <text>` - Update description
 
 Can update multiple fields in one command.
 
